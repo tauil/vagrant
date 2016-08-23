@@ -1,0 +1,29 @@
+export GEM_HOME="$HOME/.gems"
+export GEM_PATH="$GEM_HOME"
+export PATH="$PATH:$GEM_HOME/bin"
+
+alias ..="cd .."
+alias ...="cd ../.."
+alias ~="cd ~" # `cd` is probably faster to type though
+alias -- -="cd -"
+alias vv='cd ..; cd -'
+
+# List all files colorized in long format
+alias l="ls -GlAh"
+alias ll="ls -Glh"
+# List all files colorized, including dot files
+alias la="ls -GA"
+# List only directories
+alias lsd='ls -l | grep "^d"'
+
+alias tlog='tail -f log/development.log'
+alias bex="bundle exec"
+alias rs='bin/rails server -b 0.0.0.0'
+alias rc='bin/rails console'
+alias rg='bin/rails generate'
+alias fs='bin/foreman start -f Procfile.development'
+
+alias b='cd /rexpense/src && bundle install'
+alias setup='cd /rexpense/src && bundle install && && rake db:setup && rake db:data:reset && rake db:test:prepare'
+alias run='cd /rexpense/src && bundle install && bundle exec foreman start'
+alias dbconsole='cd /rexpense/src && bundle install && bin/rails dbconsole'

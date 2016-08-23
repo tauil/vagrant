@@ -1,0 +1,220 @@
+- hosts: local
+  connection: local
+
+  vars:
+    phantomjs_version: '1.9.7'
+    phantomjs_url: 'https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-1.9.7-linux-x86_64.tar.bz2'
+
+  roles:
+    - role: nicolai86.phantomjs
+      tags:
+        - phantomjs
+        - ruby
+    - role: laggyluke.direnv
+      tags:
+        - common
+        - user
+
+  tasks:
+
+    - name: adds brightbox apt repository
+      apt_repository: >
+        repo='ppa:brightbox/ruby-ng'
+      tags:
+        - ruby
+
+    - name: removes previous ruby (if any)
+      apt: >
+        pkg=$item
+        state=absent
+        purge=yes
+        force=yes
+      with_items:
+        - ruby2.1
+        - ruby1.9
+        - ruby-2.1
+      tags:
+        - ruby
+
+    - name: installs ruby 2.2
+      apt: >
+        pkg=ruby2.2
+        update_cache=yes
+        cache_valid_time=604800
+        state=latest
+        force=yes
+      tags:
+        - ruby
+
+    - name: installs ruby2.2-dev package
+      apt: >
+        pkg=ruby2.2-dev
+        update_cache=yes
+        cache_valid_time=604800
+        state=latest
+        force=yes
+      tags:
+        - ruby
+        - ruby-dev
+
+    - name: installs ruby-switch
+      apt: >
+        pkg=ruby-switch
+        update_cache=yes
+        cache_valid_time=604800
+        state=latest
+        force=yes
+      tags:
+        - ruby
+        - ruby-switch
+
+    - name: sets ruby2.2 as ruby default
+      command: >
+        ruby-switch --set ruby2.2
+      tags:
+        - ruby
+        - ruby-switch
+      sudo: yes
+
+    - name: instals bundler gem if necessary
+      command: bash -lc 'GEM_HOME=/home/tauil/.gems GEM_PATH=/home/tauil/.gems gem install bundler'
+      sudo: yes
+      sudo_user: tauil -i
+      tags:
+        - ruby
+        - user
+        - gems
+
+    - name: installs common packages
+      apt: "pkg={{item}} state=latest force=yes"
+      with_items:
+        - build-essential
+        - autoconf
+        - automake
+        - bison
+        - libc6-dev
+        - libffi-dev
+        - libreadline6
+        - libreadline6-dev
+        - libssl-dev
+        - libtool
+        - libxml2
+        - libxml2-dev
+        - libxslt-dev
+        - libxslt1-dev
+        - libyaml-dev
+        - ncurses-dev
+        - zlib1g
+        - zlib1g-dev
+        - git
+        - nodejs
+        - curl
+        - libcurl4-openssl-dev
+        - ghostscript
+        - libgs-dev
+      tags:
+        - common
+        - ruby
+
+    - name: installs required packages for phantomjs
+      apt: "pkg={{item}} state=latest force=yes"
+      with_items:
+        - fontconfig
+        - libfontconfig
+        - libfreetype6
+        - libstdc++6
+      tags:
+        - phantomjs
+        - ruby
+
+    - name: ensure ntpd is at the latest version
+      apt: pkg=ntp state=latest force=yes
+      notify:
+      - restart ntpd
+      tags:
+        - common
+
+    - name: adds postgres repo key
+      apt_key: >
+        url=https://www.postgresql.org/media/keys/ACCC4CF8.asc
+      tags:
+        - postgres
+        - databases
+
+    - name: adds postgres repo
+      apt_repository: >
+        repo='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'
+      tags:
+        - postgres
+        - databases
+
+    - name: installs postgresql 9.4.1
+      apt: >
+        pkg={{item}}
+        update_cache=yes
+        state=latest
+        force=yes
+      with_items:
+        - postgresql-9.4
+        - postgresql-contrib-9.4
+        - libpq-dev
+        - python-psycopg2
+      tags:
+        - postgresql
+        - databases
+
+    - postgresql_user: name=postgres password=postgres
+      tags:
+        - postgresql
+        - databases
+      sudo: yes
+      sudo_user: postgres
+
+    - name: activates hstore and citext extensions on postgresql
+      command: >
+        psql template1 -c 'CREATE EXTENSION IF NOT EXISTS "{{item}}"'
+      with_items:
+        - hstore
+        - citext
+      tags:
+        - postgresql
+        - databases
+      sudo: yes
+      sudo_user: postgres
+
+    - name: installs redis 2.8
+      apt: pkg=redis-server state=latest force=yes
+      tags:
+        - redis
+        - databases
+
+    - name: setups tauil user environment (dotfiles)
+      copy: >
+        src=files/{{item}}
+        dest=/home/tauil/.{{item}}
+        owner=tauil
+        group=tauil
+        mode=0644
+      with_items:
+        - bash_aliases
+        - gemrc
+        - irbrc
+        - pryrc
+        - gitconfig
+      tags:
+        - user
+
+    - name: install imagemagick
+      apt: pkg=imagemagick state=latest force=yes
+      tags:
+        - imagemagick
+
+    - name: installs imagemagickwand dev lib
+      apt: pkg=libmagickwand-dev state=latest force=yes
+      tags:
+        - imagemagick
+
+  handlers:
+
+    - name: restart ntpd
+      service: name=ntpd state=restarted

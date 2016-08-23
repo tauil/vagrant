@@ -1,0 +1,37 @@
+# encoding: utf-8
+
+# Load plugins (only those I whitelist)
+Pry.config.should_load_plugins = false
+Pry.plugins["nav"].activate!
+
+Pry.config.history.file = "~/.irb_history"
+
+Pry.config.prompt = proc do |obj, level, _|
+  prompt = ""
+  prompt << "#{Rails.version}@" if defined?(Rails)
+  prompt << "#{RUBY_VERSION}"
+  "#{prompt} (#{obj})> "
+end
+
+Pry.config.exception_handler = proc do |output, exception, _|
+  output.puts "\e[31m#{exception.class}: #{exception.message}"
+  output.puts "from #{exception.backtrace.first}\e[0m"
+end
+
+if defined?(Rails)
+  require "rails/console/app"
+  require "rails/console/helpers"
+  TOPLEVEL_BINDING.eval("self").extend ::Rails::ConsoleMethods
+end
+
+begin
+  require 'awesome_print'
+  Pry.config.print = proc {|output, value| Pry::Helpers::BaseHelpers.stagger_output("=> #{value.ai}", output)}
+rescue LoadError => err
+  puts "no awesome_print :("
+end
+
+Pry.commands.alias_command 'c', 'continue'
+Pry.commands.alias_command 's', 'step'
+Pry.commands.alias_command 'n', 'next'
+Pry.commands.alias_command 'l', 'whereami'
