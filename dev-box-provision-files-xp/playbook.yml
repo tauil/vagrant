@@ -1,0 +1,139 @@
+- hosts: local
+  connection: local
+
+  vars:
+    phantomjs_version: '1.9.7'
+    phantomjs_url: 'https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-1.9.7-linux-x86_64.tar.bz2'
+
+  pre_tasks:
+    - name: create user group
+      group: >
+        name=tauil
+        state=present
+
+    - name: create a new user
+      user: >
+        name=tauil
+        createhome=yes
+        state=present
+        group='tauil'
+        groups='sudo'
+        password='change'
+        shell='/bin/bash'
+
+    - name: installs common packages
+      apt: "pkg={{item}} state=latest force=yes"
+      with_items:
+        - software-properties-common
+        - build-essential
+        - autoconf
+        - automake
+        - bison
+        - libc6-dev
+        - libffi-dev
+        - libreadline6
+        - libreadline6-dev
+        - libssl-dev
+        - libtool
+        - libxml2
+        - libxml2-dev
+        - libxslt-dev
+        - libxslt1-dev
+        - libyaml-dev
+        - ncurses-dev
+        - zlib1g
+        - zlib1g-dev
+        - nodejs
+        - curl
+        - libcurl4-openssl-dev
+        - ghostscript
+        - libgs-dev
+      tags:
+        - common
+        - ruby
+      sudo: yes
+
+    - name: add git repo
+      apt_repository: repo='ppa:nginx/stable'
+      sudo: yes
+
+    - name: installs git
+      apt: "pkg={{item}} state=latest force=yes"
+      with_items:
+        - git
+
+  tasks:
+    - name: installs postgresql
+      apt: >
+        pkg=$item
+        update_cache=yes
+        state=latest
+        force=yes
+      with_items:
+        - python-psycopg2
+        - postgresql-contrib
+        - postgresql-9.5
+        - libpq-dev
+
+      tags:
+        - postgresql
+        - databases
+      sudo: yes
+
+      # After running this playbook. To fix postgres db:create. Run this:
+      # sudo su postgres
+
+      # psql
+
+      # update pg_database set datistemplate=false where datname='template1';
+      # drop database Template1;
+      # create database template1 with owner=postgres encoding='UTF-8'
+      #   lc_collate='en_US.utf8' lc_ctype='en_US.utf8' template template0;
+
+      # update pg_database set datistemplate=true where datname='template1';
+
+    - postgresql_user: name=postgres password=postgres
+      tags:
+        - postgresql
+        - databases
+      sudo: yes
+      sudo_user: postgres
+
+    - name: installs redis
+      apt: pkg=redis-server state=latest force=yes
+      tags:
+        - redis
+        - databases
+      sudo: yes
+
+    - name: install imagemagick
+      apt: pkg=imagemagick state=latest force=yes
+      tags:
+        - imagemagick
+      sudo: yes
+
+    - name: installs imagemagickwand dev lib
+      apt: pkg=libmagickwand-dev state=latest force=yes
+      tags:
+        - imagemagick
+      sudo: yes
+
+    - name: installs npm
+      apt: pkg=npm state=latest force=yes
+      tags:
+        - node
+      sudo: yes
+
+    - name: install n package to handle multiple node versions
+      command: bash -lc 'npm install n -g'
+      sudo: yes
+      tags:
+        - node
+
+  # This cause a error of permission. Solution: http://stackoverflow.com/questions/18737006/rvm-ruby-permission-denied
+  # roles:
+  #   - role: AerisCloud.rvm
+  #     tags:
+  #       - ruby
+  #     sudo: yes
+  #     sudo_user: tauil
